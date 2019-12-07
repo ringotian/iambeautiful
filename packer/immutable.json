@@ -1,0 +1,60 @@
+{
+    "variables": 
+        {
+            "gcp_project_id": null,
+            "gcp_source_image_family": null,
+            "gcp_machine_type": null,
+            "gcp_ssh_username": null
+        },
+    "builders": [
+        {
+            "type": "googlecompute",
+            "project_id": "{{user `gcp_project_id`}}",
+            "image_name": "reddit-full-{{timestamp}}",
+            "image_family": "reddit-full",
+            "source_image_family": "{{user `gcp_source_image_family`}}",
+            "zone": "europe-west1-b",
+            "ssh_username": "{{user `gcp_ssh_username`}}",
+            "machine_type": "{{user `gcp_machine_type`}}",
+            "disk_size": "50",
+            "disk_type": "pd-standard",
+            "network": "default",
+            "tags": ["puma-server"],
+            "image_description": "Monolith reddit app"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "script": "config-scripts/install_ruby.sh",
+            "execute_command": "sudo {{.Path}}"
+        },
+        {
+            "type": "shell",
+            "script": "config-scripts/install_mongo.sh",
+            "execute_command": "sudo {{.Path}}"
+        }, 
+        {
+            "type": "file",
+            "source": "files/reddit",
+            "destination": "/home/{{user `gcp_ssh_username`}}"
+        },
+        {
+            "type": "shell",
+            "inline": "cd /home/{{user `gcp_ssh_username`}}/reddit && bundle install"
+        },
+        {
+            "type": "file",
+            "source": "files/reddit.service",
+            "destination": "/home/{{user `gcp_ssh_username`}}/reddit/reddit.service"
+        },
+        {
+            "type": "shell",
+            "inline": [
+                "sudo cp /home/{{user `gcp_ssh_username`}}/reddit/reddit.service  /etc/systemd/system/reddit.service",
+                "sudo systemctl enable reddit.service "
+                ]
+        }
+
+    ]
+}
